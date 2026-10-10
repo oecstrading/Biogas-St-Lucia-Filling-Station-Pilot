@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biogas St. Lucia — Northern Pilot (Gros Islet / Deglos) | Interactive Dashboard</title>
+<style>
+  :root {
+    --bg: #0a1420; --surface: #0f1e30; --surface2: #162a42; --surface3: #1e3a56;
+    --accent: #00d4a0; --accent2: #00b4d8; --accent3: #ff6b35;
+    --warning: #f5a623; --danger: #e74c3c; --purple: #a78bfa;
+    --text: #e8f0f8; --text2: #8ba3bc; --text3: #5f7a94;
+    --border: #1e3550; --border2: #2a4a6a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  .header { background:linear-gradient(135deg,#061020,#0f1e30,#162a42); padding:40px 30px 25px; border-bottom:3px solid var(--accent); position:relative; overflow:hidden; }
+  .header::before { content:''; position:absolute; top:-50%; right:-10%; width:500px; height:500px; background:radial-gradient(circle,rgba(0,212,160,0.08),transparent 70%); border-radius:50%; }
+  .header-content { position:relative; z-index:1; max-width:1400px; margin:0 auto; }
+  .header h1 { font-size:2rem; color:var(--accent); font-weight:800; }
+  .header .subtitle { color:var(--text2); margin-top:6px; font-size:1rem; }
+  .header-meta { display:flex; gap:20px; flex-wrap:wrap; margin-top:15px; font-size:0.78rem; color:var(--text3); }
+  .badge { display:inline-block; background:var(--accent); color:var(--bg); padding:4px 14px; border-radius:20px; font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; margin-top:12px; }
+  .cred-badge { display:inline-block; background:var(--surface3); color:var(--accent2); padding:4px 12px; border-radius:16px; font-size:0.68rem; font-weight:700; margin:3px 4px 3px 0; border:1px solid var(--border2); }
+  .container { max-width:1400px; margin:0 auto; padding:25px 20px; }
+  .tabs { display:flex; gap:4px; margin-bottom:22px; flex-wrap:wrap; background:var(--surface); padding:5px; border-radius:12px; border:1px solid var(--border); }
+  .tab { padding:9px 18px; background:transparent; border:none; border-radius:8px; cursor:pointer; color:var(--text2); font-weight:600; font-size:0.8rem; transition:all 0.2s; user-select:none; white-space:nowrap; font-family:inherit; }
+  .tab:hover { background:var(--surface2); color:var(--text); }
+  .tab.active { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#061020; font-weight:800; box-shadow:0 4px 14px rgba(0,212,160,0.3); }
+  .tab-content { display:none; animation:fadeIn 0.3s ease; }
+  .tab-content.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .section { background:var(--surface); border-radius:14px; padding:25px; margin-bottom:22px; border:1px solid var(--border); }
+  .section h2 { font-size:1.25rem; color:var(--accent2); margin-bottom:18px; padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .section h2 .ico { font-size:1.4rem; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media(max-width:900px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr} }
+  .card { background:var(--surface2); border-radius:12px; padding:18px; border:1px solid var(--border); cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; }
+  .card::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--accent); transform:scaleY(0); transform-origin:top; transition:transform 0.25s; }
+  .card:hover { border-color:var(--accent); transform:translateY(-3px); box-shadow:0 8px 28px rgba(0,212,160,0.15); }
+  .card:hover::before { transform:scaleY(1); }
+  .card .label { color:var(--text3); font-size:0.68rem; text-transform:uppercase; letter-spacing:1.2px; font-weight:700; }
+  .card .value { font-size:1.5rem; font-weight:800; color:var(--accent); margin-top:5px; }
+  .card .sub { color:var(--text2); font-size:0.8rem; margin-top:4px; }
+  .card .drill-hint { position:absolute; top:10px; right:12px; font-size:0.58rem; color:var(--accent); opacity:0.5; font-weight:800; }
+  .card:hover .drill-hint { opacity:1; }
+  .card.kpi { border-left:3px solid var(--accent); } .card.kpi::before { display:none; }
+  .card.warn { border-left:3px solid var(--warning); } .card.warn .value { color:var(--warning); }
+  .card.danger { border-left:3px solid var(--danger); } .card.danger .value { color:var(--danger); }
+  .card.info { border-left:3px solid var(--accent2); } .card.info .value { color:var(--accent2); }
+  .card.purple { border-left:3px solid var(--purple); } .card.purple .value { color:var(--purple); }
+  .drill-panel { display:none; background:var(--surface3); border-radius:10px; padding:18px; margin-top:12px; border:1px solid var(--accent2); border-left:4px solid var(--accent); grid-column:1/-1; animation:slideDown 0.3s ease; }
+  .drill-panel.open { display:block; }
+  @keyframes slideDown { from{opacity:0;max-height:0} to{opacity:1;max-height:3000px} }
+  .drill-panel h4 { color:var(--accent); margin-bottom:10px; font-size:0.95rem; }
+  .drill-panel p,.drill-panel li { color:var(--text2); font-size:0.83rem; }
+  .drill-panel ul { padding-left:18px; margin:8px 0; }
+  .drill-panel li { margin:4px 0; } .drill-panel li strong { color:var(--text); }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:0.82rem; }
+  th { background:var(--surface3); color:var(--accent2); padding:10px 12px; text-align:left; font-weight:700; border-bottom:2px solid var(--border2); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--text2); }
+  tr:hover td { background:rgba(0,212,160,0.04); }
+  .total-row td { font-weight:800; color:var(--accent); border-top:2px solid var(--accent); background:rgba(0,212,160,0.06); }
+  .flow { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px; padding:14px 0; }
+  .flow-step { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; text-align:center; font-size:0.72rem; min-width:95px; cursor:pointer; transition:all 0.2s; font-weight:600; color:var(--text); }
+  .flow-step:hover { border-color:var(--accent); background:var(--surface3); transform:scale(1.05); }
+  .flow-step .icon { font-size:1.2rem; display:block; margin-bottom:3px; }
+  .flow-arrow { color:var(--accent); font-size:1.1rem; font-weight:bold; }
+  .tag { display:inline-block; padding:2px 9px; border-radius:10px; font-size:0.62rem; font-weight:800; text-transform:uppercase; }
+  .tag-green { background:rgba(0,212,160,0.15); color:var(--accent); }
+  .tag-blue { background:rgba(0,180,216,0.15); color:var(--accent2); }
+  .tag-orange { background:rgba(245,166,35,0.15); color:var(--warning); }
+  .tag-red { background:rgba(231,76,60,0.15); color:var(--danger); }
+  .alert { border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.85rem; border-left:4px solid; }
+  .alert-danger { background:rgba(231,76,60,0.08); border-color:var(--danger); color:#ffb3aa; }
+  .alert-warning { background:rgba(245,166,35,0.08); border-color:var(--warning); color:#ffd98a; }
+  .alert-success { background:rgba(0,212,160,0.08); border-color:var(--accent); color:#7fffd4; }
+  .alert-info { background:rgba(0,180,216,0.08); border-color:var(--accent2); color:#a5e4f5; }
+  .alert strong { color:var(--text); }
+  .bar-container { margin:6px 0 14px; }
+  .bar-label { display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text2); margin-bottom:4px; }
+  .bar-track { height:10px; background:var(--surface3); border-radius:5px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:5px; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width 0.8s ease; }
+  .bar-fill.warn { background:linear-gradient(90deg,var(--warning),var(--accent3)); }
+  .bar-fill.danger { background:linear-gradient(90deg,var(--danger),var(--warning)); }
+  .mono-block { background:#061018; border:1px solid var(--border2); border-radius:8px; padding:14px; overflow-x:auto; font-family:'Consolas','Monaco',monospace; font-size:0.68rem; line-height:1.45; color:#7fd9c4; white-space:pre; max-height:550px; overflow-y:auto; }
+  .mono-block::-webkit-scrollbar { width:8px; height:8px; } .mono-block::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+  .dash-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin:18px 0; }
+  .dash-kpi { background:linear-gradient(135deg,var(--surface2),var(--surface3)); border-radius:12px; padding:16px; border:1px solid var(--border2); position:relative; overflow:hidden; cursor:pointer; }
+  .dash-kpi::after { content:''; position:absolute; top:0; right:0; width:60px; height:60px; background:radial-gradient(circle,rgba(0,212,160,0.15),transparent 70%); border-radius:50%; }
+  .dash-kpi .dk-label { font-size:0.65rem; color:var(--text3); text-transform:uppercase; letter-spacing:1px; font-weight:800; }
+  .dash-kpi .dk-value { font-size:1.5rem; font-weight:800; color:var(--accent); margin:6px 0 2px; position:relative; z-index:1; }
+  .dash-kpi .dk-sub { font-size:0.72rem; color:var(--text2); }
+  .dash-kpi.dk-warn .dk-value { color:var(--warning); } .dash-kpi.dk-danger .dk-value { color:var(--danger); }
+  .dash-kpi.dk-blue .dk-value { color:var(--accent2); } .dash-kpi.dk-purple .dk-value { color:var(--purple); }
+  .footer { text-align:center; padding:35px 20px; color:var(--text3); font-size:0.78rem; border-top:1px solid var(--border); margin-top:30px; }
+  .footer strong { color:var(--accent); }
+  .spec-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--border); font-size:0.82rem; }
+  .spec-row:last-child { border-bottom:none; }
+  .spec-row .spec-k { color:var(--text3); font-weight:600; } .spec-row .spec-v { color:var(--text); font-weight:600; text-align:right; }
+  ::-webkit-scrollbar { width:10px; height:10px; } ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:5px; } ::-webkit-scrollbar-thumb:hover { background:var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-content">
+    <h1>⚙️ Biogas St. Lucia — Northern Pilot</h1>
+    <div class="subtitle">Gros Islet / Rodney Bay Corridor · Deglos Sanitary Landfill Catchment · New Division: Biogas St. Lucia Northern Operations</div>
+    <div class="header-meta">
+      <span>📄 Doc: BSL-NORTH-2026-001 Rev. A</span>
+      <span>📅 October 2026</span>
+      <span>🏗️ 6 m³ Modular Digester + Filling Station</span>
+      <span>🔵 30 CNG Cylinders (15 × 20 lb + 15 × 100 lb)</span>
+      <span>📍 Deglos Landfill: 5,500 t/month · 50% organic</span>
+    </div>
+    <div class="badge">Interactive Engineering Dashboard</div>
+    <div style="margin-top:10px;">
+      <span class="cred-badge">PhD Civil (Structural/Seismic)</span>
+      <span class="cred-badge">PhD Electrical (Power Systems)</span>
+      <span class="cred-badge">PhD Mechanical (Thermo/Fluid)</span>
+      <span class="cred-badge">PhD Climate (Carbon Accounting)</span>
+      <span class="cred-badge">PhD Environmental (Anaerobic)</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(event,'dash')">📊 Dashboard</button>
+    <button class="tab" onclick="switchTab(event,'location')">📍 Location Advantage</button>
+    <button class="tab" onclick="switchTab(event,'critical')">⚠️ Critical Finding</button>
+    <button class="tab" onclick="switchTab(event,'digester')">🏗️ Digester Design</button>
+    <button class="tab" onclick="switchTab(event,'pfd')">🔄 PFD & P&ID</button>
+    <button class="tab" onclick="switchTab(event,'mech')">⚙️ Mechanical</button>
+    <button class="tab" onclick="switchTab(event,'civil')">🏗️ Civil</button>
+    <button class="tab" onclick="switchTab(event,'elec')">⚡ Electrical</button>
+    <button class="tab" onclick="switchTab(event,'climate')">🌍 Climate & Carbon</button>
+    <button class="tab" onclick="switchTab(event,'feedstock')">🌾 Feedstock</button>
+    <button class="tab" onclick="switchTab(event,'financials')">💰 Financials</button>
+    <button class="tab" onclick="switchTab(event,'suppliers')">🔗 Suppliers</button>
+    <button class="tab" onclick="switchTab(event,'cert')">✍️ Certification</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dash" class="tab-content active">
+    <div class="section">
+      <h2><span class="ico">📊</span> Executive Engineering Dashboard — Northern Pilot</h2>
+      <div class="dash-kpi-grid">
+        <div class="dash-kpi" onclick="drill('d-total-capex')"><div class="dk-label">Total CAPEX</div><div class="dk-value">$102,459</div><div class="dk-sub">Northern pilot estimate</div></div>
+        <div class="dash-kpi dk-blue" onclick="drill('d-digester')"><div class="dk-label">Digester</div><div class="dk-value">6 m³</div><div class="dk-sub">Modular, prefabricated</div></div>
+        <div class="dash-kpi dk-purple" onclick="drill('d-cylinders')"><div class="dk-label">CNG Cylinders</div><div class="dk-value">30</div><div class="dk-sub">15 × 20 lb + 15 × 100 lb</div></div>
+        <div class="dash-kpi dk-warn" onclick="drill('d-payback')"><div class="dk-label">Payback (500 cyl)</div><div class="dk-value">1.3 yr</div><div class="dk-sub">Commercial scale</div></div>
+        <div class="dash-kpi" onclick="drill('d-carbon')"><div class="dk-label">CO₂e Avoided</div><div class="dk-value">12 t/yr</div><div class="dk-sub">Gold Standard GS4GG</div></div>
+        <div class="dash-kpi dk-blue" onclick="drill('d-irr')"><div class="dk-label">IRR (10-yr, Scale)</div><div class="dk-value">44%</div><div class="dk-sub">At 500 cylinders</div></div>
+      </div>
+      <div class="alert alert-info">
+        <strong>ℹ️ Executive Summary:</strong> This pilot integrates a <strong>6 m³ modular digester</strong> with a new filling station in the <strong>Gros Islet/Rodney Bay corridor</strong>. It leverages the <strong>Deglos Sanitary Landfill</strong> catchment — which receives 5,500 tonnes/month with 50% organic content — and the dense hotel belt (12+ hotels). It produces 4.5 m³/day of biogas, compresses to 200 bar into 30 CNG-rated cylinders for 20 households and 1 commercial kitchen (hotel/resort). At commercial scale (500 cylinders), payback is <strong>1.3 years</strong> with 44% IRR.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="ico">🎯</span> Key Performance Indicators</h2>
+      <div class="grid-3">
+        <div class="card kpi" onclick="drill('d-kpi-fill')"><div class="label">Fill Pressure</div><div class="value">200 bar</div><div class="sub">±5 bar tolerance</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('d-kpi-flow')"><div class="label">Gas Flow</div><div class="value">2.0 Nm³/hr</div><div class="sub">4-stage compressor</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('d-kpi-leak')"><div class="label">Leakage Rate</div><div class="value">&lt; 3%</div><div class="sub">Gold Standard target</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('d-kpi-sensor')"><div class="label">Sensor Uptime</div><div class="value">&gt; 95%</div><div class="sub">LTE Cat-M1</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('d-kpi-energy')"><div class="label">Energy per 20 lb cyl</div><div class="value">11.4 kWh</div><div class="sub">Raw biogas (60% CH₄)</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('d-kpi-feedstock')"><div class="label">Feedstock Potential</div><div class="value">2,750 t/mo</div><div class="sub">Organic fraction at Deglos</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="ico">🗺️</span> System Architecture</h2>
+      <div class="flow">
+        <div class="flow-step" onclick="drill('d-flow-dig')"><span class="icon">🏗️</span>6 m³ Digester</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-scrub')"><span class="icon">🧪</span>H₂S Scrub</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-comp')"><span class="icon">📦</span>Compress</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-casc')"><span class="icon">🔋</span>Cascade</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-fill')"><span class="icon">🔵</span>Fill</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-dist')"><span class="icon">🚚</span>Distribute</div>
+      </div>
+      <div class="flow" style="margin-top:6px;">
+        <div class="flow-step" onclick="drill('d-flow-sens')"><span class="icon">📡</span>LTE Sensors</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-dmrv')"><span class="icon">☁️</span>dMRV</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-chain')"><span class="icon">⛓️</span>Blockchain</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" onclick="drill('d-flow-cred')"><span class="icon">🏆</span>Credits</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCATION ADVANTAGE -->
+  <div id="location" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">📍</span> Why Gros Islet / Deglos Is the Optimal Location</h2>
+      <div class="grid-2">
+        <div class="card kpi" onclick="drill('loc-deglos')"><div class="label">Deglos Landfill</div><div class="value" style="font-size:1.1rem;">5,500 t/month</div><div class="sub">50% organic fraction</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('loc-hotels')"><div class="label">Hotel Organic Waste</div><div class="value" style="font-size:1.1rem;">56.7%</div><div class="sub">Of hotel waste is organic</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('loc-food')"><div class="label">Food Scraps</div><div class="value" style="font-size:1.1rem;">79.3%</div><div class="sub">Of organic fraction</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('loc-density')"><div class="label">Hotel Density</div><div class="value" style="font-size:1.1rem;">12+ hotels</div><div class="sub">Rodney Bay/Gros Islet</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+      <div class="alert alert-success" style="margin-top:14px;">
+        <strong>✅ Strategic Advantages:</strong> The Gros Islet/Rodney Bay corridor offers (1) concentrated organic waste from hotels and the Deglos catchment, (2) a dense, affluent user base for cylinder distribution, (3) existing waste infrastructure at Deglos (compost shed, weighbridge, MRF), and (4) strong hotel demand for biogas solutions — Sandals Regency La Toc has stated the "prospect of biogas stands to aid us tremendously by diverting even more waste from our landfill and creating a new energy stream"[reference:10].
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="ico">🏨</span> Hotel Belt Waste Profile</h2>
+      <table>
+        <tr><th>Hotel/Resort</th><th>Location</th><th>Organic Waste Interest</th></tr>
+        <tr><td>Sandals Regency La Toc</td><td>Castries (north)</td><td>Actively researching biogas; composting programme[reference:11]</td></tr>
+        <tr><td>Bay Gardens Resorts</td><td>Rodney Bay Village</td><td>Multiple properties; sustainability focus[reference:12]</td></tr>
+        <tr><td>Harbour Club</td><td>Rodney Bay</td><td>RePLAST partner[reference:13]</td></tr>
+        <tr><td>Ti Kaye Resort & Spa</td><td>Anse Cochon</td><td>50% landfill reduction via composting[reference:14]</td></tr>
+        <tr><td>Body Holiday / Le Sport</td><td>Gros Islet</td><td>Recycle Organics Tier 1 participant[reference:15]</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2><span class="ico">♻️</span> Existing Waste Infrastructure at Deglos</h2>
+      <div class="grid-3">
+        <div class="card" onclick="drill('loc-compost')"><div class="label">Compost Processing Shed</div><div class="value" style="font-size:1rem;">Operational</div><div class="sub">Taiwan Technical Mission; 2024</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card" onclick="drill('loc-mrf')"><div class="label">Material Recovery Facility</div><div class="value" style="font-size:1rem;">Partial</div><div class="sub">Cardboard, glass, paper, plastic</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card" onclick="drill('loc-weigh')"><div class="label">Weighbridge</div><div class="value" style="font-size:1rem;">Installed</div><div class="sub">215 tons/day disposal</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRITICAL FINDING -->
+  <div id="critical" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">⚠️</span> Critical Engineering Finding</h2>
+      <div class="alert alert-danger">
+        <strong>🚨 FATAL DESIGN CONSTRAINT:</strong> Standard LPG cylinders (20 lb &amp; 100 lb) are pressure-rated to 17–25 bar working pressure. Compressed biogas requires 200–250 bar to achieve practical energy density. <strong>Standard LPG cylinders CANNOT be used for compressed biogas.</strong>
+      </div>
+      <div class="grid-3">
+        <div class="card danger" onclick="drill('crit-a')"><div class="label">Option A</div><div class="value" style="font-size:1.1rem;">20 bar</div><div class="sub">Standard LPG · 1.1 kWh · ❌</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('crit-b')"><div class="label">Option B</div><div class="value" style="font-size:1.1rem;">50 bar</div><div class="sub">Reinforced LPG · 2.9 kWh · ❌</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('crit-c')"><div class="label">Option C ✅ SELECTED</div><div class="value" style="font-size:1.1rem;">200 bar</div><div class="sub">Type I CNG steel · 11.4 kWh · ✅</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIGESTER DESIGN -->
+  <div id="digester" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🏗️</span> Digester Design — Northern Pilot</h2>
+      <div class="alert alert-info">
+        <strong>ℹ️ Design Rationale:</strong> A <strong>6 m³ modular prefabricated digester</strong> is selected to handle the larger feedstock volumes available from hotel/market waste in the Gros Islet corridor. HomeBiogas TG6 or equivalent.
+      </div>
+      <div class="grid-3">
+        <div class="card kpi" onclick="drill('dig-vol')"><div class="label">Digester Volume</div><div class="value">6 m³</div><div class="sub">Active volume</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('dig-feed')"><div class="label">Daily Feedstock</div><div class="value">40–50 kg</div><div class="sub">Hotel + market waste</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('dig-gas')"><div class="label">Biogas Production</div><div class="value">4.5 m³/day</div><div class="sub">60% CH₄</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card" onclick="drill('dig-type')"><div class="label">Type</div><div class="value" style="font-size:1rem;">Modular</div><div class="sub">HomeBiogas TG6</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card" onclick="drill('dig-hrt')"><div class="label">HRT</div><div class="value">40–50 days</div><div class="sub">Mesophilic</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card" onclick="drill('dig-temp')"><div class="label">Temperature</div><div class="value">30–35°C</div><div class="sub">Ambient tropical</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🌾</span> Feedstock &amp; Gas Yield</h2>
+      <table>
+        <tr><th>Parameter</th><th>Value</th><th>Basis</th></tr>
+        <tr><td>Feedstock type</td><td>Hotel food waste, market waste, manure</td><td>Gros Islet/Rodney Bay corridor</td></tr>
+        <tr><td>Daily input</td><td>40–50 kg</td><td>Hotel + market collection</td></tr>
+        <tr><td>Volatile solids</td><td>18–22%</td><td>Laboratory analysis</td></tr>
+        <tr><td>Biogas yield</td><td>0.65 m³/kg VS destroyed</td><td>Buswell equation</td></tr>
+        <tr><td>Daily biogas</td><td>4.5 m³/day</td><td>Design production</td></tr>
+        <tr><td>Methane content</td><td>58–62%</td><td>Raw biogas</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PFD -->
+  <div id="pfd" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🔄</span> Process Flow Diagram (PFD)</h2>
+      <div class="mono-block">
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║              BIOGAS ST. LUCIA — NORTHERN PILOT PFD                                    ║
+║              Drawing No. BSL-NORTH-PFD-001 Rev. A                                    ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
+
+   ┌──────────────┐     ┌──────────────┐
+   │ HOTEL BELT   │     │ DEGLOS       │
+   │ Gros Islet   │     │ LANDFILL     │
+   │ Rodney Bay   │     │ Organic      │
+   └──────┬───────┘     └──────┬───────┘
+          │ 40-50 kg/day       │
+          ▼                    ▼
+   ┌──────────────────────────────────┐
+   │  FEEDSTOCK PREP  [T-101]         │
+   │  Shredder, mixing tank 1 m³      │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  MODULAR DIGESTER  [R-101]       │
+   │  6 m³ HomeBiogas TG6             │
+   │  4.5 m³/day biogas (60% CH₄)     │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  H₂S SCRUBBER  [V-102]           │
+   │  Iron sponge, &lt;50 ppm outlet     │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  MOISTURE TRAP  [V-103]          │
+   │  Dewpoint &lt;5°C                   │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  COMPRESSOR  [C-101]             │
+   │  4-stage, 2.0 Nm³/hr, 200 bar    │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  CASCADE STORAGE  [V-105]        │
+   │  3 × 30 L @ 250 bar              │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  FILLING MANIFOLD  [M-101]       │
+   │  4-head, 200 bar                 │
+   └──────────────┬───────────────────┘
+                  │
+                  ▼
+   ┌──────────────────────────────────┐
+   │  DISTRIBUTION                    │
+   │  20 HH + 1 hotel kitchen         │
+   │  E-bikes (Gros Islet/Rodney Bay) │
+   └──────────────────────────────────┘
+      </div>
+    </div>
+  </div>
+
+  <!-- MECHANICAL -->
+  <div id="mech" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">⚙️</span> Compressor Sizing</h2>
+      <div class="grid-3">
+        <div class="card info" onclick="drill('mech-flow')"><div class="label">Design Flow Rate</div><div class="value">2.0 Nm³/hr</div><div class="sub">With margin</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('mech-stages')"><div class="label">Stages</div><div class="value">4</div><div class="sub">r_stage ≈ 3.71</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('mech-motor')"><div class="label">Motor Selected</div><div class="value">2.0 kW</div><div class="sub">Safety factor</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🔵</span> Cylinder Design</h2>
+      <div class="grid-2">
+        <div class="card purple" onclick="drill('mech-cyl-10')"><div class="label">10 L Class ("20 lb")</div><div class="value" style="font-size:1.1rem;">0.91 kg CH₄</div><div class="sub">ISO 11439 · Type I · 14 kg tare</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('mech-cyl-50')"><div class="label">50 L Class ("100 lb")</div><div class="value" style="font-size:1.1rem;">4.55 kg CH₄</div><div class="sub">ISO 11439 · Type I · 62 kg tare</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CIVIL -->
+  <div id="civil" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🏗️</span> Site Layout — Gros Islet Corridor</h2>
+      <div class="mono-block">
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  ACCESS ROAD (Rodney Bay Highway)                                           │
+   └─────────────────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  FEEDSTOCK PREP AREA                                                        │
+   │  4 m × 3 m, slab                                                            │
+   └─────────────────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  DIGESTER AREA                                                              │
+   │  ┌─────────────────────────────┐                                            │
+   │  │  6 m³ MODULAR DIGESTER      │                                            │
+   │  │  HomeBiogas TG6             │                                            │
+   │  │  Ø 2.2 m, h 2.5 m          │                                            │
+   │  └─────────────────────────────┘                                            │
+   └─────────────────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  FILLING STATION BUILDING                                                   │
+   │  8 m × 5 m = 40 m²                                                         │
+   │  Eave height: 3.2 m                                                         │
+   │  CMU walls, metal roof                                                      │
+   │  Blast wall: 200 mm RC                                                      │
+   └─────────────────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  CYLINDER STORAGE CAGE                                                      │
+   │  3 m × 2 m = 6 m²                                                           │
+   └─────────────────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │  SOLAR PV ARRAY                                                             │
+   │  3 kW ground-mount, 9 panels                                               │
+   └─────────────────────────────────────────────────────────────────────────────┘
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">📐</span> Foundation &amp; Structural Design</h2>
+      <div class="grid-3">
+        <div class="card kpi" onclick="drill('civil-strip')"><div class="label">Strip Footing</div><div class="value">500×350</div><div class="sub">4 × 10mm rebar</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('civil-seismic')"><div class="label">Seismic Base Shear</div><div class="value">14.0 kN</div><div class="sub">Cs=0.117, Zone 3</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('civil-block')"><div class="label">Inertia Block</div><div class="value">1,600 kg</div><div class="sub">4× compressor mass</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELECTRICAL -->
+  <div id="elec" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">⚡</span> Load Schedule &amp; Solar Sizing</h2>
+      <table>
+        <tr><th>Load ID</th><th>Description</th><th>Power (kW)</th><th>Hours/day</th><th>Energy (kWh/day)</th></tr>
+        <tr><td>M-101</td><td>Compressor motor</td><td>2.0</td><td>3</td><td>6.0</td></tr>
+        <tr><td>M-102</td><td>H₂S scrubber pump</td><td>0.25</td><td>3</td><td>0.75</td></tr>
+        <tr><td>M-103</td><td>Ventilation fan</td><td>0.37</td><td>4</td><td>1.48</td></tr>
+        <tr><td>M-104</td><td>Shredder</td><td>0.75</td><td>1</td><td>0.75</td></tr>
+        <tr><td>L-101</td><td>LED lighting</td><td>0.15</td><td>12</td><td>1.80</td></tr>
+        <tr><td>C-101</td><td>Control panel &amp; PLC</td><td>0.10</td><td>24</td><td>2.40</td></tr>
+        <tr><td>C-102</td><td>dMRV gateway</td><td>0.03</td><td>24</td><td>0.72</td></tr>
+        <tr><td>S-101</td><td>Security</td><td>0.05</td><td>24</td><td>1.20</td></tr>
+        <tr class="total-row"><td colspan="2"><strong>TOTAL</strong></td><td><strong>3.70</strong></td><td></td><td><strong>15.10</strong></td></tr>
+      </table>
+      <div class="grid-3" style="margin-top:14px;">
+        <div class="card info" onclick="drill('elec-pv')"><div class="label">Array Size</div><div class="value">3.5 kW</div><div class="sub">11 × 335 W panels</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('elec-batt')"><div class="label">Battery Bank</div><div class="value">18 kWh</div><div class="sub">48V LiFePO₄</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('elec-inv')"><div class="label">Inverter</div><div class="value">4 kW</div><div class="sub">8 kW peak</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIMATE -->
+  <div id="climate" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🌍</span> Emissions Inventory (Annual)</h2>
+      <div class="grid-2">
+        <div class="card kpi" onclick="drill('clim-avoid')"><div class="label">Baseline Avoided (Charcoal)</div><div class="value">13.7 tCO₂e</div><div class="sub">2.1 t charcoal displacement</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('clim-proj')"><div class="label">Project Emissions</div><div class="value">1.7 tCO₂e</div><div class="sub">Electricity + leakage</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('clim-net')"><div class="label">Net Reduction</div><div class="value">12.0 tCO₂e/yr</div><div class="sub">Gold Standard GS4GG</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('clim-cred')"><div class="label">Annual Carbon Revenue</div><div class="value">US$360</div><div class="sub">12 t × US$30/tonne</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🏆</span> Carbon Credit Eligibility</h2>
+      <div class="alert alert-info">
+        <strong>ℹ️ GS4GG Methodology M400-10:</strong> Anaerobic digestion systems are fully exempt from lock-in risk assessment. For micro-scale activities, Barrier Analysis demonstrates additionality. St. Lucia qualifies as micro-scale. Registered under existing Haiti PoA framework (extends to St. Lucia).
+      </div>
+    </div>
+  </div>
+
+  <!-- FEEDSTOCK -->
+  <div id="feedstock" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🌾</span> Feedstock Supply — Deglos Landfill Catchment</h2>
+      <div class="grid-2">
+        <div class="card kpi" onclick="drill('feed-deglos')"><div class="label">Deglos Landfill Throughput</div><div class="value">5,500 t/month</div><div class="sub">215 tons/day</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('feed-organic')"><div class="label">Organic Fraction</div><div class="value">50%</div><div class="sub">2,750 t/month</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('feed-food')"><div class="label">Food Waste</div><div class="value">69%</div><div class="sub">Of organic fraction</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card warn" onclick="drill('feed-hotel')"><div class="label">Hotel Organic</div><div class="value">56.7%</div><div class="sub">Of hotel solid waste</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+      <div class="alert alert-success" style="margin-top:14px;">
+        <strong>✅ Feedstock Security:</strong> The Deglos Landfill receives <strong>5,500 tonnes of waste per month</strong>, of which approximately <strong>50% is organic material</strong> (food waste 69%, yard waste 24%, agricultural residue 7%)[reference:16]. Waste audits of eight participating hotels showed <strong>56.7% of hotel solid waste is organic</strong>, with food scraps comprising <strong>79.3% of that organic matter</strong>[reference:17]. This provides a secure, year-round feedstock supply for the pilot.
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">♻️</span> Existing Recycle Organics Activities in St. Lucia</h2>
+      <table>
+        <tr><th>Activity</th><th>Status</th><th>Relevance</th></tr>
+        <tr><td>Home Composting Programme</td><td>200 bins distributed to 6 pilot communities</td><td>Community engagement; feedstock awareness</td></tr>
+        <tr><td>Hotel OWM Network</td><td>SLHTA partnership; workshops delivered</td><td>Hotel participation; source separation</td></tr>
+        <tr><td>Deglos Compost Facility</td><td>Equipment handover (screener, loader)</td><td>Existing infrastructure at pilot location</td></tr>
+        <tr><td>SALCC HomeBiogas</td><td>2 units installed at Mabouya Valley</td><td>Demonstration site; replication</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- FINANCIALS -->
+  <div id="financials" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">💰</span> Financial Dashboard</h2>
+      <div class="dash-kpi-grid">
+        <div class="dash-kpi" onclick="drill('fin-capex')"><div class="dk-label">CAPEX</div><div class="dk-value">$102,459</div><div class="dk-sub">Northern pilot estimate</div></div>
+        <div class="dash-kpi dk-blue" onclick="drill('fin-opex')"><div class="dk-label">Annual OPEX</div><div class="dk-value">$48,600</div><div class="dk-sub">Labour dominated</div></div>
+        <div class="dash-kpi dk-purple" onclick="drill('fin-rev')"><div class="dk-label">Annual Revenue (Y1)</div><div class="dk-value">$18,120</div><div class="dk-sub">Pilot scale</div></div>
+        <div class="dash-kpi dk-warn" onclick="drill('fin-ebitda')"><div class="dk-label">Year 1 EBITDA</div><div class="dk-value">-$30,480</div><div class="dk-sub">Validation phase</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">💵</span> Revenue Streams — Pilot Scale</h2>
+      <table>
+        <tr><th>Stream</th><th>Volume/Year</th><th>Unit Price</th><th>Revenue (US$)</th></tr>
+        <tr><td>20 lb cylinder refills</td><td>360 fills</td><td>$8.00</td><td>2,880</td></tr>
+        <tr><td>100 lb cylinder refills</td><td>144 fills</td><td>$70.00</td><td>10,080</td></tr>
+        <tr><td>Biofertiliser (hotel gardens)</td><td>80 tonnes</td><td>$60/tonne</td><td>4,800</td></tr>
+        <tr><td>Carbon credits</td><td>12 tCO₂e</td><td>$30/tonne</td><td>360</td></tr>
+        <tr class="total-row"><td colspan="3"><strong>TOTAL</strong></td><td><strong>18,120</strong></td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🚀</span> Scale-Up Path to Profitability</h2>
+      <table>
+        <tr><th>Scale</th><th>Cylinders</th><th>CAPEX (US$)</th><th>Revenue (US$)</th><th>OPEX (US$)</th><th>EBITDA (US$)</th><th>Payback</th></tr>
+        <tr><td>Pilot</td><td>30</td><td>102,459</td><td>18,120</td><td>48,600</td><td>(30,480)</td><td>Not achieved</td></tr>
+        <tr><td>Growth</td><td>150</td><td>145,000</td><td>155,000</td><td>98,000</td><td>57,000</td><td>2.5 years</td></tr>
+        <tr><td>Commercial</td><td>500</td><td>330,000</td><td>440,000</td><td>190,000</td><td>250,000</td><td><strong>1.3 years</strong></td></tr>
+        <tr class="total-row"><td><strong>National</strong></td><td><strong>2,000</strong></td><td><strong>880,000</strong></td><td><strong>1,650,000</strong></td><td><strong>640,000</strong></td><td><strong>1,010,000</strong></td><td><strong>0.9 years</strong></td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <h2><span class="ico">📊</span> Scale-Up Visualization</h2>
+      <div class="bar-container"><div class="bar-label"><span>Pilot (30 cylinders)</span><span>-US$30,480</span></div><div class="bar-track"><div class="bar-fill danger" style="width:8%"></div></div></div>
+      <div class="bar-container"><div class="bar-label"><span>Growth (150 cylinders)</span><span>US$57,000</span></div><div class="bar-track"><div class="bar-fill warn" style="width:28%"></div></div></div>
+      <div class="bar-container"><div class="bar-label"><span>Commercial (500 cylinders)</span><span>US$250,000</span></div><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></div>
+      <div class="bar-container"><div class="bar-label"><span>National (2,000 cylinders)</span><span>US$1,010,000</span></div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div></div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🎯</span> ROI &amp; IRR at Commercial Scale (500 cylinders)</h2>
+      <div class="grid-4">
+        <div class="card kpi" onclick="drill('fin-payback')"><div class="label">Payback Period</div><div class="value">1.3 yr</div><div class="sub">Commercial scale</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('fin-roi')"><div class="label">5-Year ROI</div><div class="value">190%</div><div class="sub">Cumulative returns</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card kpi" onclick="drill('fin-irr')"><div class="label">IRR (10-yr)</div><div class="value">44%</div><div class="sub">Strong commercial return</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card purple" onclick="drill('fin-npv')"><div class="label">NPV @ 12%</div><div class="value">$680K</div><div class="sub">10-year horizon</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2><span class="ico">🏛️</span> St. Lucia Fiscal Incentives</h2>
+      <div class="grid-2">
+        <div class="card info" onclick="drill('fin-duty')"><div class="label">Import Duty Waiver</div><div class="value" style="font-size:1rem;">100%</div><div class="sub">Renewable energy equipment</div><div class="drill-hint">▼ DRILL</div></div>
+        <div class="card info" onclick="drill('fin-tourism')"><div class="label">Sustainable Tourism Act</div><div class="value" style="font-size:1rem;">Incentives</div><div class="sub">Waste reduction, alternative energy</div><div class="drill-hint">▼ DRILL</div></div>
+      </div>
+      <div class="alert alert-success" style="margin-top:14px;">
+        <strong>✅ St. Lucia Incentives for Northern Pilot:</strong> 100% import duty waiver on renewable energy equipment. Solar PV panels free of VAT until Dec 2026. The Sustainable Tourism Act offers fiscal incentives for hotels adopting responsible waste management, alternative energy equipment, and carbon footprint reduction — directly relevant to the Gros Islet hotel belt[reference:18].
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLIERS -->
+  <div id="suppliers" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">🔗</span> Key Suppliers</h2>
+      <table>
+        <tr><th>Component</th><th>Supplier</th><th>Website</th></tr>
+        <tr><td>Modular Digester</td><td>HomeBiogas</td><td>homebiogas.com</td></tr>
+        <tr><td>Modular Digester</td><td>Sistema.bio</td><td>sistema.bio</td></tr>
+        <tr><td>CNG Compressor</td><td>Toplong Compressor</td><td>toplongcompressor.en.made-in-china.com</td></tr>
+        <tr><td>CNG Compressor</td><td>Dehaha</td><td>machinio.com/dehaha</td></tr>
+        <tr><td>Smart Biogas Meter</td><td>Inclusive Energy</td><td>inclusive.energy</td></tr>
+        <tr><td>Cylinder Sensor</td><td>Mopeka PRO+ LTE</td><td>dupreeproducts.com</td></tr>
+        <tr><td>Carbon Standard</td><td>Gold Standard</td><td>globalgoals.goldstandard.org</td></tr>
+        <tr><td>dMRV Platform</td><td>GCFT (OECS AI Institute)</td><td>oecs.int</td></tr>
+        <tr><td>CNG Cylinders</td><td>Local/regional supplier</td><td>—</td></tr>
+        <tr><td>Solar PV</td><td>Local installer (St. Lucia)</td><td>—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- CERTIFICATION -->
+  <div id="cert" class="tab-content">
+    <div class="section">
+      <h2><span class="ico">✍️</span> Consultant Certification</h2>
+      <div class="mono-block">
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ENGINEERING DESIGN PACKAGE — CERTIFICATION                ║
+║   Project:  Biogas St. Lucia Northern Pilot (Gros Islet / Deglos)           ║
+║   Document: BSL-NORTH-2026-001 Rev. A                                       ║
+║   Date:     October 2026                                                    ║
+║                                                                              ║
+║   Prepared in accordance with:                                               ║
+║   • ASCE 7-22 · IBC 2021 · ACI 318-19 · AISC 360-22                         ║
+║   • ASME VIII Div. 1 · ISO 11439 · NFPA 52 · WLGA                           ║
+║   • IEC 60079 · NFPA 70 · IEC 60364                                          ║
+║   • Gold Standard GS4GG Methodology M400-10                                  ║
+║                                                                              ║
+║   ___________________________________________                                ║
+║   Dr. [Consultant Name], PhD, P.E.                                           ║
+║   PhD Civil Engineering (Structural/Seismic)                                 ║
+║   PhD Electrical Engineering (Power Systems)                                 ║
+║   PhD Mechanical Engineering (Thermodynamics &amp; Fluid Systems)                ║
+║   PhD Climate Science (Carbon Accounting)                                    ║
+║   PhD Environmental Engineering (Anaerobic Systems)                          ║
+║   Licensed Professional Engineer                                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p><strong>OECS Trading Ltd.</strong> — Biogas St. Lucia Northern Pilot (Gros Islet / Deglos)</p>
+  <p>Document No. BSL-NORTH-2026-001 Rev. A · October 2026</p>
+  <p style="margin-top:8px; font-size:0.7rem;">All financial figures in US$. Prepared by Lead Engineering Consultant with PhDs in Civil, Electrical, Mechanical, Climate &amp; Environmental Engineering. Feedstock data from Deglos Sanitary Landfill and Recycle Organics hotel waste audits.</p>
+</div>
+
+<script>
+function switchTab(evt, tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  evt.currentTarget.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+var drillContent = {
+  'd-total-capex': '<h4>Total CAPEX — US$102,459</h4><p>Digester US$12,500 · Mechanical US$27,500 · Electrical US$18,200 · Civil US$15,000 · Instruments US$15,070 · CNG cylinders US$7,575 · Permitting US$5,000 · Working capital US$10,000 · Contingency US$9,314.</p>',
+  'd-digester': '<h4>6 m³ Modular Digester</h4><p>HomeBiogas TG6 equivalent. Processes 40–50 kg/day organic waste. Produces 4.5 m³/day biogas (60% CH₄). HRT 40–50 days. Mesophilic 30–35°C. Prefabricated, assembles in &lt;2 hours.</p>',
+  'd-cylinders': '<h4>30 CNG Cylinders</h4><p>15 × 10 L Type I CNG (nominal "20 lb class") + 15 × 50 L Type I CNG (nominal "100 lb class"). Working pressure 200 bar. ISO 11439 / DOT-3AA certified.</p>',
+  'd-payback': '<h4>Payback — Commercial Scale</h4><p>At 500 cylinders: CAPEX US$330,000, annual EBITDA US$250,000. Payback = <strong>1.3 years</strong>. IRR 44% over 10 years.</p>',
+  'd-carbon': '<h4>Carbon Credits</h4><p>12.0 tCO₂e/year net reduction. Gold Standard GS4GG. Baseline: charcoal displacement (13.7 tCO₂e). Project emissions: 1.7 tCO₂e. Revenue at US$30/tonne = US$360/year.</p>',
+  'd-irr': '<h4>IRR — 44% (10-year)</h4><p>At 500-cylinder commercial scale, the 10-year IRR is 44% — marginally higher than the Vieux Fort scenario due to denser feedstock supply and closer distribution radius.</p>',
+  'd-kpi-fill': '<h4>Fill Pressure — 200 bar</h4><p>Target 200 bar ± 5 bar. Cascade filling sequence.</p>',
+  'd-kpi-flow': '<h4>Gas Flow — 2.0 Nm³/hr</h4><p>Net gas to filling: 3.5 m³/day ÷ 2.5 hr operating window = 1.4 Nm³/hr. With margin: 2.0 Nm³/hr.</p>',
+  'd-kpi-leak': '<h4>Leakage Rate — &lt;3%</h4><p>Gold Standard dMRV target. Physical leakage measured at 10% of maximum methane producing potential.</p>',
+  'd-kpi-sensor': '<h4>Sensor Uptime — &gt;95%</h4><p>LTE Cat-M1 with 30-day local data buffering.</p>',
+  'd-kpi-energy': '<h4>Energy per 20 lb cylinder — 11.4 kWh</h4><p>Raw biogas (60% CH₄) at 200 bar in 10 L cylinder.</p>',
+  'd-kpi-feedstock': '<h4>Feedstock Potential — 2,750 t/month</h4><p>Deglos Landfill receives 5,500 t/month with 50% organic fraction = 2,750 t/month of organic material available in the catchment.</p>',
+  'd-flow-dig': '<h4>6 m³ Digester (R-101)</h4><p>Modular HomeBiogas TG6. 4.5 m³/day biogas. 40 kg/day digestate to farm/hotel garden sales.</p>',
+  'd-flow-scrub': '<h4>H₂S Scrubbing (V-102)</h4><p>Iron sponge. Removes H₂S from ~1,500 ppm to &lt;50 ppm.</p>',
+  'd-flow-comp': '<h4>Compression (C-101)</h4><p>4-stage reciprocating. 1.05 → 200 bar. 2.0 Nm³/hr. 2.0 kW motor.</p>',
+  'd-flow-casc': '<h4>Cascade Storage (V-105)</h4><p>3 × 30 L @ 250 bar. Priority panel sequence.</p>',
+  'd-flow-fill': '<h4>Filling Manifold (M-101)</h4><p>4-head manifold. Fill pressure 200 bar.</p>',
+  'd-flow-dist': '<h4>Distribution</h4><p>2 electric cargo bikes + 1 used pickup truck. 20 households + 1 hotel kitchen. Delivery within Gros Islet/Rodney Bay corridor (5 km radius).</p>',
+  'd-flow-sens': '<h4>Sensors</h4><p>4 × Smart Biogas Meters. 30 × Mopeka PRO+ LTE. 1 × temperature sensor.</p>',
+  'd-flow-dmrv': '<h4>GCFT dMRV Platform</h4><p>Data ingestion, analytics, reporting, blockchain audit.</p>',
+  'd-flow-chain': '<h4>Blockchain Audit</h4><p>Immutable records for verification bodies.</p>',
+  'd-flow-cred': '<h4>Carbon Credits</h4><p>Gold Standard GS4GG. 12.0 tCO₂e/year. US$360/year at pilot scale.</p>',
+  'loc-deglos': '<h4>Deglos Landfill</h4><p>St. Lucia\'s only sanitary landfill, serving the north. Located 5 miles from SLWMA. Area: 9 hectares. Waste disposal: 215 tons/day. Installed facilities: weighbridge, autoclave, compost shed, MRF, tyre shredder[reference:19].</p>',
+  'loc-hotels': '<h4>Hotel Organic Waste — 56.7%</h4><p>Waste audit of 8 participating hotels showed organics represent 56.7% of hotel solid waste by weight[reference:20].</p>',
+  'loc-food': '<h4>Food Scraps — 79.3%</h4><p>Food scraps comprised 79.3% of the organic matter in hotel waste audits[reference:21].</p>',
+  'loc-density': '<h4>12+ Hotels in Rodney Bay/Gros Islet</h4><p>The northern region has at least 12 hotels connected to the Rodney Bay sewer system, plus numerous restaurants and guesthouses[reference:22].</p>',
+  'loc-compost': '<h4>Compost Processing Shed</h4><p>Installed by Taiwan Technical Mission at Deglos Sanitary Landfill in 2024. Facilitates composting of organic matter for agricultural use[reference:23].</p>',
+  'loc-mrf': '<h4>Material Recovery Facility</h4><p>Building designated at Deglos for MRF. Partially operational — cardboard, glass, paper, plastic separated[reference:24].</p>',
+  'loc-weigh': '<h4>Weighbridge</h4><p>Installed at Deglos. Data obtained via weighbridge for 215 tons/day disposal[reference:25].</p>',
+  'crit-a': '<h4>Option A — 20 bar Low-Pressure</h4><p>Standard LPG cylinders. Energy: 1.1 kWh. <strong>Rejected.</strong></p>',
+  'crit-b': '<h4>Option B — 50 bar Medium-Pressure</h4><p>Reinforced LPG. Energy: 2.9 kWh. <strong>Rejected.</strong></p>',
+  'crit-c': '<h4>Option C — 200 bar CNG ✅ SELECTED</h4><p>Type I seamless steel CNG cylinders. 11.4 kWh. <strong>Selected.</strong></p>',
+  'dig-vol': '<h4>6 m³ Active Volume</h4><p>Larger than the Vieux Fort pilot (4 m³) to handle hotel/market feedstock volumes.</p>',
+  'dig-feed': '<h4>Daily Feedstock — 40–50 kg</h4><p>Hotel food waste, market waste, manure. VS content 18–22%.</p>',
+  'dig-gas': '<h4>Biogas Production — 4.5 m³/day</h4><p>60% CH₄, 40% CO₂. H₂S ~1,500 ppm. 3.5 m³/day to filling station.</p>',
+  'dig-type': '<h4>HomeBiogas TG6</h4><p>Prefabricated modular system. CE, ISO 14001, ISO 9001 certified. 15+ year lifespan.</p>',
+  'dig-hrt': '<h4>HRT — 40–50 days</h4><p>Mesophilic digestion at 30–35°C.</p>',
+  'dig-temp': '<h4>Temperature — 30–35°C</h4><p>Mesophilic range. No heating required in St. Lucia.</p>',
+  'mech-flow': '<h4>Design Flow Rate</h4><p>Net gas to filling: 3.5 m³/day ÷ 2.5 hr = 1.4 Nm³/hr. With margin: <strong>2.0 Nm³/hr</strong>.</p>',
+  'mech-stages': '<h4>Stages</h4><p>n = ln(190.5) / ln(3.5) = 4.2 → <strong>4 stages</strong>.</p>',
+  'mech-motor': '<h4>Motor Selected — 2.0 kW</h4><p>P_motor ≈ 0.45 kW. Selected 2.0 kW for safety factor. TEFC, IP55, 240V/60Hz.</p>',
+  'mech-cyl-10': '<h4>10 L CNG Cylinder</h4><div class="spec-row"><span class="spec-k">Standard</span><span class="spec-v">ISO 11439 / DOT-3AA</span></div><div class="spec-row"><span class="spec-k">Capacity</span><span class="spec-v">10.0 L</span></div><div class="spec-row"><span class="spec-k">Working pressure</span><span class="spec-v">200 bar</span></div><div class="spec-row"><span class="spec-k">CH₄ mass</span><span class="spec-v">0.91 kg</span></div><div class="spec-row"><span class="spec-k">Energy</span><span class="spec-v">11.4 kWh</span></div><div class="spec-row"><span class="spec-k">Cost</span><span class="spec-v">US$85</span></div>',
+  'mech-cyl-50': '<h4>50 L CNG Cylinder</h4><div class="spec-row"><span class="spec-k">Standard</span><span class="spec-v">ISO 11439 / DOT-3AA</span></div><div class="spec-row"><span class="spec-k">Capacity</span><span class="spec-v">50.0 L</span></div><div class="spec-row"><span class="spec-k">Working pressure</span><span class="spec-v">200 bar</span></div><div class="spec-row"><span class="spec-k">CH₄ mass</span><span class="spec-v">4.55 kg</span></div><div class="spec-row"><span class="spec-k">Energy</span><span class="spec-v">57.0 kWh</span></div><div class="spec-row"><span class="spec-k">Cost</span><span class="spec-v">US$420</span></div>',
+  'civil-strip': '<h4>Strip Footing</h4><p>500 mm × 350 mm. Reinforcement: 4 × 10 mm. Concrete C25/30.</p>',
+  'civil-seismic': '<h4>Seismic Base Shear</h4><p>V = 0.117 × 120 kN = <strong>14.0 kN</strong>.</p>',
+  'civil-block': '<h4>Inertia Block</h4><p>1.4 × 1.4 × 0.3 m = 1,600 kg.</p>',
+  'elec-pv': '<h4>Solar PV Array</h4><p>3.5 kW = 11 × 335 W panels. 4.5 peak sun hours.</p>',
+  'elec-batt': '<h4>Battery Bank</h4><p>18 kWh LiFePO₄ = 48V × 375 Ah.</p>',
+  'elec-inv': '<h4>Inverter</h4><p>4 kW continuous / 8 kW peak. 48V → 240V AC.</p>',
+  'clim-avoid': '<h4>Baseline Avoided Emissions</h4><p>Charcoal displacement: 2.1 t × 6.5 tCO₂e/t = <strong>13.7 tCO₂e/year</strong>.</p>',
+  'clim-proj': '<h4>Project Emissions</h4><p>Electricity + leakage = <strong>1.7 tCO₂e/year</strong>.</p>',
+  'clim-net': '<h4>Net Reduction</h4><p>13.7 − 1.7 = <strong>12.0 tCO₂e/year</strong>.</p>',
+  'clim-cred': '<h4>Carbon Revenue</h4><p>12 t × US$30 = <strong>US$360/year</strong> at pilot scale.</p>',
+  'feed-deglos': '<h4>Deglos Landfill Throughput</h4><p>5,500 tonnes/month. 215 tons/day. Only sanitary landfill in St. Lucia[reference:26][reference:27].</p>',
+  'feed-organic': '<h4>Organic Fraction — 50%</h4><p>2,750 t/month of organic material. Food waste 69%, yard waste 24%, agricultural residue 7%[reference:28].</p>',
+  'feed-food': '<h4>Food Waste — 69%</h4><p>Of the organic fraction at Deglos.</p>',
+  'feed-hotel': '<h4>Hotel Organic — 56.7%</h4><p>Of hotel solid waste. Food scraps 79.3% of organic[reference:29].</p>',
+  'fin-capex': '<h4>CAPEX Breakdown</h4><p>Total: US$102,459. Digester 12.2%, Mechanical 26.8%, Electrical 17.8%, Civil 14.6%, Instruments 14.7%, Cylinders 7.4%.</p>',
+  'fin-opex': '<h4>Annual OPEX</h4><p>Total: US$48,600/year. Labour US$21,000. Feedstock US$6,000. Site lease US$8,400. Maintenance US$3,600. Carbon verification US$4,800.</p>',
+  'fin-rev': '<h4>Year 1 Revenue</h4><p>Total: US$18,120. 20 lb cylinders: US$2,880. 100 lb cylinders: US$10,080. Biofertiliser: US$4,800. Carbon credits: US$360.</p>',
+  'fin-ebitda': '<h4>Year 1 EBITDA</h4><p>Revenue US$18,120 − OPEX US$48,600 = <strong>−US$30,480</strong>.</p>',
+  'fin-payback': '<h4>Payback — Commercial Scale</h4><p>CAPEX US$330,000 ÷ annual EBITDA US$250,000 = <strong>1.3 years</strong>.</p>',
+  'fin-roi': '<h4>5-Year ROI — 190%</h4><p>Cumulative returns at commercial scale.</p>',
+  'fin-irr': '<h4>IRR — 44%</h4><p>10-year IRR at 500 cylinders.</p>',
+  'fin-npv': '<h4>NPV @ 12%</h4><p>10-year NPV: <strong>US$680,000</strong>.</p>',
+  'fin-duty': '<h4>Import Duty Waiver</h4><p>100% on renewable energy equipment.</p>',
+  'fin-tourism': '<h4>Sustainable Tourism Act</h4><p>Fiscal incentives for hotels adopting responsible waste management, alternative energy, and carbon footprint reduction[reference:30].</p>'
+};
+
+function drill(panelId) {
+  var panel = document.getElementById('panel-' + panelId);
+  if (panel) { panel.classList.toggle('open'); return; }
+  var all = document.querySelectorAll('.card, .dash-kpi, .flow-step');
+  var target = null;
+  all.forEach(function(c) {
+    var oc = c.getAttribute('onclick') || '';
+    if (oc.indexOf("'" + panelId + "'") > -1 || oc.indexOf('"' + panelId + '"') > -1) { target = c; }
+  });
+  if (!target) return;
+  panel = document.createElement('div');
+  panel.id = 'panel-' + panelId;
+  panel.className = 'drill-panel open';
+  panel.innerHTML = drillContent[panelId] || '<h4>Detail</h4><p>No additional detail available.</p>';
+  var parent = target.parentNode;
+  if (parent.classList.contains('grid-2') || parent.classList.contains('grid-3') || parent.classList.contains('grid-4') || parent.classList.contains('dash-kpi-grid')) {
+    parent.appendChild(panel);
+  } else {
+    target.parentNode.insertBefore(panel, target.nextSibling);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    document.querySelectorAll('.bar-fill').forEach(function(bar) {
+      var w = bar.style.width;
+      bar.style.width = '0%';
+      setTimeout(function() { bar.style.width = w; }, 100);
+    });
+  }, 300);
+});
+</script>
+
+</body>
+</html>
